@@ -1,4 +1,4 @@
-"""EstrellaLab: simulador didáctico de propiedades estelares.
+"""Forja Estelar: simulador didáctico de propiedades estelares.
 
 Ejecutar:
     pip install streamlit matplotlib
@@ -106,8 +106,8 @@ def cargar_ejemplo(nombre):
 
 
 def main():
-    st.set_page_config(page_title="EstrellaLab", page_icon="⭐", layout="wide")
-    st.title("⭐ EstrellaLab")
+    st.set_page_config(page_title="Forja Estelar", page_icon="⭐", layout="wide")
+    st.title("⭐ Forja Estelar")
     st.write(
         "**Explora cómo la temperatura y la luminosidad se relacionan con el "
         "radio y la posición de una estrella en el diagrama Hertzsprung–Russell.**"
@@ -206,22 +206,6 @@ def main():
         f"L = {luminosidad:.3g} L☉, resulta R ≈ {radio:.2f} R☉."
     )
 
-    with st.expander("💡 Mini desafío: cambia solo la temperatura"):
-        st.write(
-            "Si mantienes fija la luminosidad y **duplicas la temperatura**, "
-            "¿cómo cambia el radio calculado?"
-        )
-        respuesta = st.radio(
-            "Elige una respuesta", ["Se duplica", "Se reduce a la mitad",
-                                  "Se reduce a la cuarta parte"],
-            index=None,
-        )
-        if respuesta:
-            if respuesta == "Se reduce a la cuarta parte":
-                st.success("¡Correcto! A luminosidad fija, R es proporcional a 1/T².")
-            else:
-                st.warning("Revisa el término (T☉/T)² de la ecuación.")
-
     with st.expander("📚 Interpretación y límites del simulador"):
         st.markdown(
             """
@@ -241,7 +225,7 @@ def main():
         )
 
     st.caption(
-        "EstrellaLab | Prototipo educativo de Ciencias de la Computación + "
+        "Forja Estelar | Prototipo educativo de Ciencias de la Computación + "
         "Astronomía | Todo el programa está contenido en app.py"
     )
 
