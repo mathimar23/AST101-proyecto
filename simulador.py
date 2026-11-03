@@ -2,7 +2,7 @@
 
 Ejecutar:
     pip install streamlit matplotlib
-    python -m streamlit run simulador.py
+    python -m streamlit run hola.py
 
 Proyecto educativo: el diagrama incluye una secuencia principal ESQUEMÁTICA,
 no una base de datos observacional ni un modelo completo de evolución estelar.
@@ -28,6 +28,11 @@ def formatear_numero(valor, decimales=3):
     if decimales > 0:
         numero = numero.rstrip("0").rstrip(".")
     return numero.replace(",", "#").replace(".", ",").replace("#", ".")
+
+
+def formatear_luminosidad(luminosidad):
+    """Evita redondear estrellas poco luminosas a 0,002 o 0,000."""
+    return formatear_numero(luminosidad, 5 if luminosidad < 0.01 else 3)
 
 
 def radio_en_radios_solares(temperatura_k, luminosidad_solar):
@@ -56,7 +61,7 @@ def color_aproximado(temperatura_k):
     return "#97beff"
 
 
-def dibujar_diagrama_hr(temperatura, luminosidad, color):
+def dibujar_diagrama_hr(temperatura, luminosidad, color, nombre="Tu estrella"):
     """Diagrama HR con una curva de referencia meramente esquemática."""
     fig, ax = plt.subplots(figsize=(8.2, 5.1))
     fig.patch.set_facecolor("#101827")
@@ -79,7 +84,7 @@ def dibujar_diagrama_hr(temperatura, luminosidad, color):
     )
     ax.scatter(
         [temperatura], [luminosidad], s=270, color=color,
-        edgecolors="white", linewidths=2, zorder=6, label="Tu estrella",
+        edgecolors="white", linewidths=2, zorder=6, label=nombre,
     )
 
     # En un diagrama HR convencional las estrellas más calientes van a la izquierda.
@@ -115,6 +120,67 @@ def dibujar_diagrama_hr(temperatura, luminosidad, color):
     return fig
 
 
+# Ejemplos orientativos. Temperatura efectiva en K y luminosidad bolométrica
+# en unidades solares. Los datos están aproximados y varían entre publicaciones.
+# Referencias accesibles en los enlaces de cada ejemplo.
+ESTRELLAS_FAMOSAS = {
+    "Sol": {
+        "temperatura": 5772,
+        "luminosidad": 1.0,
+        "descripcion": "Nuestra estrella, referencia de la luminosidad y del radio solares.",
+        "fuente": "https://www.iau.org/static/resolutions/IAU2015_English.pdf",
+    },
+    "Próxima Centauri": {
+        "temperatura": 2980,
+        "luminosidad": 0.00151,
+        "descripcion": "Enana roja muy cercana al sistema solar; fría y poco luminosa.",
+        "fuente": "https://doi.org/10.1051/0004-6361/201730582",
+    },
+    "Sirio A": {
+        "temperatura": 9845,
+        "luminosidad": 24.7,
+        "descripcion": "Estrella caliente y muy luminosa del sistema de Sirio.",
+        "fuente": "https://doi.org/10.1071/AS10010",
+    },
+    "Vega": {
+        "temperatura": 9600,
+        "luminosidad": 40.0,
+        "descripcion": "Estrella blanca de la constelación de Lira, más caliente que el Sol.",
+        "fuente": "https://onlineobservatory.eu/wp-content/uploads/2020/12/StudentGuide_StarEvolution6.pdf",
+    },
+    "Arturo (Arcturus)": {
+        "temperatura": 4300,
+        "luminosidad": 170.0,
+        "descripcion": "Gigante anaranjada: menos caliente que el Sol, pero mucho más luminosa.",
+        "fuente": "https://onlineobservatory.eu/wp-content/uploads/2020/12/StudentGuide_StarEvolution6.pdf",
+    },
+    "Betelgeuse": {
+        "temperatura": 3500,
+        "luminosidad": 100000.0,
+        "descripcion": "Supergigante roja con luminosidad variable y parámetros inciertos.",
+        "fuente": "https://academic.oup.com/mnras/article/526/2/2765/7286655",
+    },
+}
+
+
+def aplicar_ejemplo():
+    """Actualiza los controles ANTES de que Streamlit reconstruya los widgets."""
+    nombre = st.session_state.ejemplo_seleccionado
+    datos = ESTRELLAS_FAMOSAS[nombre]
+
+    # Los controles originales usan pasos de 100 K y 0,1 en log10(L/L☉).
+    temperatura = 2500 + 100 * round((datos["temperatura"] - 2500) / 100)
+    log_lum = round(math.log10(datos["luminosidad"]), 1)
+    st.session_state.temperatura_k = int(max(2500, min(30000, temperatura)))
+    st.session_state.log_luminosidad = float(max(-3.0, min(5.0, log_lum)))
+    st.session_state.ejemplo_aplicado = nombre
+
+
+def editar_manualmente():
+    """Al mover un deslizador, vuelve al modo de estrella personalizada."""
+    st.session_state.ejemplo_aplicado = None
+
+
 def main():
     st.set_page_config(page_title="Forja Estelar", page_icon="⭐", layout="wide")
     st.title("⭐ Forja Estelar")
@@ -130,16 +196,40 @@ def main():
 
     with st.sidebar:
         st.header("🎛️ Laboratorio")
+        st.subheader("⭐ Estrellas conocidas")
+        st.selectbox(
+            "Selecciona un ejemplo",
+            options=list(ESTRELLAS_FAMOSAS),
+            key="ejemplo_seleccionado",
+        )
+        st.button(
+            "Aplicar ejemplo",
+            on_click=aplicar_ejemplo,
+            use_container_width=True,
+        )
+        if st.session_state.get("ejemplo_aplicado"):
+            st.success(f"Ejemplo aplicado: {st.session_state.ejemplo_aplicado}")
+        ejemplo = ESTRELLAS_FAMOSAS[st.session_state.ejemplo_seleccionado]
+        st.caption(ejemplo["descripcion"])
+        st.caption(
+            "Valores astronómicos orientativos; los deslizadores aproximan "
+            "la temperatura a 100 K y log₁₀(L/L☉) a 0,1."
+        )
+
+        st.divider()
+        st.subheader("Ajustes manuales")
         st.slider(
             "Temperatura superficial (K)",
             min_value=2500, max_value=30000, step=100,
             key="temperatura_k",
+            on_change=editar_manualmente,
             help="Temperatura efectiva de la superficie estelar.",
         )
         st.slider(
             "Logaritmo de luminosidad (L / L☉)",
             min_value=-3.0, max_value=5.0, step=0.1,
             key="log_luminosidad",
+            on_change=editar_manualmente,
             help="0 = luminosidad solar; 1 = 10 veces; 2 = 100 veces; -1 = 0,1 veces.",
         )
         st.caption("La escala logarítmica permite comparar estrellas muy distintas.")
@@ -151,12 +241,13 @@ def main():
 
     m1, m2, m3 = st.columns(3)
     m1.metric("🌡️ Temperatura", f"{formatear_numero(temperatura, 0)} K")
-    m2.metric("✨ Luminosidad", f"{formatear_numero(luminosidad)} L☉")
+    m2.metric("✨ Luminosidad", f"{formatear_luminosidad(luminosidad)} L☉")
     m3.metric("📏 Radio estimado", f"{formatear_numero(radio, 2)} R☉")
 
     columna_estrella, columna_diagrama = st.columns([1, 1.65], gap="large")
+    nombre_estrella = st.session_state.get("ejemplo_aplicado") or "Tu estrella"
     with columna_estrella:
-        st.subheader("Tu estrella")
+        st.subheader(nombre_estrella)
         # Tamaño de dibujo limitado para que pueda verse toda estrella en pantalla.
         tamano = round(max(55, min(165, 90 + 28 * math.log10(max(radio, 0.01)))))
         st.markdown(
@@ -179,7 +270,7 @@ def main():
             "simulación física exacta ni están a escala."
         )
         st.write(
-            f"Esta estrella emitiría unas **{formatear_numero(luminosidad)} veces** la "
+            f"Esta estrella emitiría unas **{formatear_luminosidad(luminosidad)} veces** la "
             f"luminosidad del Sol y tendría un radio aproximado de "
             f"**{formatear_numero(radio, 2)} radios solares** si se comporta como un cuerpo "
             "que cumple la ley de Stefan–Boltzmann."
@@ -187,7 +278,7 @@ def main():
 
     with columna_diagrama:
         st.subheader("Diagrama Hertzsprung–Russell")
-        figura = dibujar_diagrama_hr(temperatura, luminosidad, color)
+        figura = dibujar_diagrama_hr(temperatura, luminosidad, color, nombre_estrella)
         st.pyplot(figura, use_container_width=True)
         plt.close(figura)
         st.caption(
@@ -207,7 +298,7 @@ def main():
              r"\left(\frac{T_\odot}{T}\right)^2")
     st.write(
         f"Con T☉ = {TEMPERATURA_SOL} K, T = {formatear_numero(temperatura, 0)} K y "
-        f"L = {formatear_numero(luminosidad)} L☉, resulta R ≈ {formatear_numero(radio, 2)} R☉."
+        f"L = {formatear_luminosidad(luminosidad)} L☉, resulta R ≈ {formatear_numero(radio, 2)} R☉."
     )
 
     with st.expander("📚 Interpretación y límites del simulador"):
